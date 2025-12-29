@@ -1,4 +1,5 @@
-from globals import *
+import globals as G
+from data_container import *
 from utils import *
 
 def read_base():
@@ -174,10 +175,10 @@ def read_RR(sijp, Cij):
     return sub
 
 def read_data():
-    base = read_base()
-    FL = read_FL(base.sijp_FL, base.Cij_FL)
-    ML = read_ML(base.sijp_ML, base.Cij_ML)
-    RL = read_RL(base.sijp_RL, base.Cij_RL)
-    FR = read_FR(base.sijp_FR, base.Cij_FR)
-    MR = read_MR(base.sijp_MR, base.Cij_MR)
-    RR = read_RR(base.sijp_RR, base.Cij_RR)
+    G.base = read_base()
+    G.FL = read_FL(G.base.sijp_FL, G.base.Cij_FL)
+    ML = read_ML(G.base.sijp_ML, G.base.Cij_ML)
+    RL = read_RL(G.base.sijp_RL, G.base.Cij_RL)
+    FR = read_FR(G.base.sijp_FR, G.base.Cij_FR)
+    MR = read_MR(G.base.sijp_MR, G.base.Cij_MR)
+    RR = read_RR(G.base.sijp_RR, G.base.Cij_RR)
