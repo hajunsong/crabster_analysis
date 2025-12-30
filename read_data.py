@@ -1,38 +1,5 @@
-import globals as G
 from data_container import *
 from utils import *
-
-def read_base():
-    base = Body()
-    base.ri = np.zeros(3)
-    base.pi = np.array([1,0,0,0])
-    base.Ai = np.eye(3)
-    base.dri = np.zeros(3)
-    base.wi = np.zeros(3)
-
-    base.mi = 582.59
-    Ixx, Ixy, Iyy, Iyz, Izz, Izx = 156890393.0, 0.0, 150169673.0, 0.0, 249303699.0, 0.0
-    base.Jip = np.array([[Ixx, Ixy, Izx],
-                         [Ixy, Iyy, Iyz],
-                         [Izx, Iyz, Izz]], dtype=float)*1e-6
-    base.rhoip = np.zeros(3)
-    base.Cii = np.eye(3)
-
-    base.sijp_FL = np.array([520, 758, 0], dtype=float)*1e-3
-    base.sijp_ML = np.array([0, 858, 0], dtype=float)*1e-3
-    base.sijp_RL = np.array([-520, 758, 0], dtype=float)*1e-3
-    base.sijp_FR = np.array([520, -758, 0], dtype=float)*1e-3
-    base.sijp_MR = np.array([0, -858, 0], dtype=float)*1e-3
-    base.sijp_RR = np.array([-520, -758, 0], dtype=float)*1e-3
-
-    base.Cij_FL = ang2mat(np.pi/2, np.pi/2, 0)
-    base.Cij_ML = ang2mat(np.pi/2, np.pi/2, 0)
-    base.Cij_RL = ang2mat(np.pi/2, np.pi/2, 0)
-    base.Cij_FR = ang2mat(np.pi/2, np.pi/2, 0)
-    base.Cij_MR = ang2mat(np.pi/2, np.pi/2, 0)
-    base.Cij_RR = ang2mat(np.pi/2, np.pi/2, 0)
-
-    return base
 
 def read_L_body1(sijp, Cij):
     body = Body()
@@ -125,60 +92,3 @@ def read_R_body4():
     body.sep = np.array([-823.56,0,0], dtype=float)*1e-3
     body.Ce = ang2mat(np.pi, np.pi/2, np.pi/2)
     return body
-
-def read_FL(sijp, Cij):
-    sub = SubSystem()
-    sub.body1 = read_L_body1(sijp, Cij)
-    sub.body2 = read_L_body2()
-    sub.body3 = read_L_body3()
-    sub.body4 = read_L_body4()
-    return sub
-
-def read_ML(sijp, Cij):
-    sub = SubSystem()
-    sub.body1 = read_L_body1(sijp, Cij)
-    sub.body2 = read_L_body2()
-    sub.body3 = read_L_body3()
-    sub.body4 = read_L_body4()
-    return sub
-
-def read_RL(sijp, Cij):
-    sub = SubSystem()
-    sub.body1 = read_L_body1(sijp, Cij)
-    sub.body2 = read_L_body2()
-    sub.body3 = read_L_body3()
-    sub.body4 = read_L_body4()
-    return sub
-
-def read_FR(sijp, Cij):
-    sub = SubSystem()
-    sub.body1 = read_L_body1(sijp, Cij)
-    sub.body2 = read_L_body2()
-    sub.body3 = read_L_body3()
-    sub.body4 = read_L_body4()
-    return sub
-
-def read_MR(sijp, Cij):
-    sub = SubSystem()
-    sub.body1 = read_L_body1(sijp, Cij)
-    sub.body2 = read_L_body2()
-    sub.body3 = read_L_body3()
-    sub.body4 = read_L_body4()
-    return sub
-
-def read_RR(sijp, Cij):
-    sub = SubSystem()
-    sub.body1 = read_L_body1(sijp, Cij)
-    sub.body2 = read_L_body2()
-    sub.body3 = read_L_body3()
-    sub.body4 = read_L_body4()
-    return sub
-
-def read_data():
-    G.base = read_base()
-    G.FL = read_FL(G.base.sijp_FL, G.base.Cij_FL)
-    ML = read_ML(G.base.sijp_ML, G.base.Cij_ML)
-    RL = read_RL(G.base.sijp_RL, G.base.Cij_RL)
-    FR = read_FR(G.base.sijp_FR, G.base.Cij_FR)
-    MR = read_MR(G.base.sijp_MR, G.base.Cij_MR)
-    RR = read_RR(G.base.sijp_RR, G.base.Cij_RR)

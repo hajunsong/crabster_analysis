@@ -6,6 +6,7 @@ from utils import *
 class Body:
     # joint states
     qi: float = 0.0
+    qi_init: float = 0.0
     dqi: float = 0.0
     ddqi: float = 0.0
 
@@ -27,6 +28,7 @@ class Body:
     # parent-child kinematic params
     sijp: np.ndarray = field(default_factory=lambda: np.zeros(3))
     Cij: np.ndarray = field(default_factory=lambda: np.eye(3))
+    sij: np.ndarray = field(default_factory=lambda: np.zeros(3))
 
     # derived: COM
     rhoi: np.ndarray = field(default_factory=lambda: np.zeros(3))
