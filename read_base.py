@@ -75,7 +75,7 @@ def position_analysis():
     qv = pi[1:4]
     Ei = np.column_stack((qv, skew(qv) + q0*np.eye(3)))
     Gi = np.column_stack((qv, -skew(qv) + q0*np.eye(3)))
-    Ai = Ei@np.transpose(Gi)
+    Ai = Ei@np.Gi.T
     rpy = mat2rpy(Ai)
 
     rhoi = Ai@rhoip
@@ -88,7 +88,7 @@ def velocity_analysis():
     global Jic, wit, dric, drit, drict
 
     Ai_Cii = Ai*Cii
-    Jic = Ai_Cii*Jip*np.transpose(Ai_Cii)
+    Jic = Ai_Cii*Jip*Ai_Cii.T
     wit = skew(wi)
 
     dric = dri + wit@rhoi
