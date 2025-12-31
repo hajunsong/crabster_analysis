@@ -18,6 +18,7 @@ def main():
     sim.t_e = 2
     sim.g = -9.80665
     sim.step = 0
+    sim.motion_flag = 0
 
     L_q_init = [np.pi/4, 0, 0, -np.pi*3/4]
     R_q_init = [-np.pi/4, 0, 0, np.pi*3/4]

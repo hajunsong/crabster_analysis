@@ -3,3 +3,5 @@ dt = 0.001
 t_e = 2
 g = -9.80665
 step = 0
+
+motion_flag = 0

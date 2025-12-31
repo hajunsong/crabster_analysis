@@ -92,3 +92,39 @@ def sub_mass_force_analysis(body: List[Body, Body, Body, Body]):
                 body[i].f_c = np.array([0, 0, f_c])
             else:
                 body[i].f_c = np.zeros(3)
+            rec = body[i].re - body[i].ric
+            rect = skew(rec)
+            body[i].fic = body[i].fic + body[i].f_c
+            body[i].tic = body[i].tic + rect@body[i].f_c
+
+        body[i].Mih[0:3,0:3] = body[i].mi*np.eye(3)
+        body[i].Mih[0:3,3:6] = -body[i].mi*body[i].rict
+        body[i].Mih[3:6,0:3] = body[i].mi*body[i].rict
+        body[i].Mih[3:6,3:6] = body[i].Jic - body[i].mi*body[i].rict@body[i].rict
+
+        body[i].Qih[0:3] = body[i].fic + body[i].mi*body[i].drict@body[i].wi
+        body[i].Qih[3:6] = (body[i].tic + body[i].rict@body[i].fic + body[i].mi*body[i].rict@body[i].drict@body[i].wi
+                            - body[i].wit@body[i].Jic@body[i].wi)
+
+        if sim.motion_flag == 1:
+            body[i].Ti_RSDA = 0
+            body[i].Qih_RSDA = np.zeros(6)
+            body[i].Qjh_RSDA = np.zeros(6)
+        else:
+            body[i].Ti_RSDA = (body[i].qi_init - body[i].qi)*r_K[i] - body[i].dqi*r_C[i]
+            body[i].Qih_RSDA[0:3] = np.zeros(3)
+            body[i].Qih_RSDA[3:6] = body[i].Ti_RSDA*body[i].Hi
+            body[i].Qjh_RSDA = -body[i].Qih_RSDA
+            body[i].Qih = body[i].Qih + body[i].Qih_RSDA
+
+        body[3].Ki = body[3].Mih
+        body[2].Ki = body[2].Mih + body[3].Ki
+        body[1].Ki = body[1].Mih + body[2].Ki
+        body[0].Ki = body[0].Mih + body[1].Ki
+
+        body[3].Li = body[3].Qih
+        body[2].Li = body[2].Qih + body[3].Li - body[3].Ki@body[3].Di + body[3].Qjh_RSDA
+        body[1].Li = body[1].Qih + body[2].Li - body[2].Ki@body[2].Di + body[2].Qjh_RSDA
+        body[0].Li = body[0].Qih + body[1].Li - body[1].Ki@body[1].Di + body[1].Qjh_RSDA
+
+        
