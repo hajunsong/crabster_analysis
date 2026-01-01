@@ -34,6 +34,7 @@ Cij: np.ndarray = np.eye(3)
 # derived: COM
 rhoi: np.ndarray = np.zeros(3)
 ric: np.ndarray = np.zeros(3)
+rict: np.ndarray = np.zeros((3,3))
 
 wit: np.ndarray = np.zeros((3,3))
 rit: np.ndarray = np.zeros((3,3))
@@ -75,7 +76,7 @@ def position_analysis():
     qv = pi[1:4]
     Ei = np.column_stack((qv, skew(qv) + q0*np.eye(3)))
     Gi = np.column_stack((qv, -skew(qv) + q0*np.eye(3)))
-    Ai = Ei@np.Gi.T
+    Ai = Ei@Gi.T
     rpy = mat2rpy(Ai)
 
     rhoi = Ai@rhoip

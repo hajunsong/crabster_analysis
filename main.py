@@ -1,10 +1,5 @@
 import read_base as base
-import read_FL as FL
-import read_ML as ML
-import read_RL as RL
-import read_FR as FR
-import read_MR as MR
-import read_RR as RR
+
 from analysis import analysis
 from Y_vector import define_Y_vector
 import sim_info as sim
