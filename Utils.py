@@ -8,7 +8,7 @@ def skew(v: np.ndarray) -> np.ndarray:
         [-vy, vx, 0.0]
     ], dtype=float)
 
-def ang2mat(psi : float, theta : float, phi : float) -> np.ndarray:
+def euler_zxz(psi : float, theta : float, phi : float) -> np.ndarray:
 
     mat_psi = np.array([[np.cos(psi), -np.sin(psi), 0], [np.sin(psi), np.cos(psi), 0], [0, 0, 1]])
     mat_theta = np.array([[1, 0, 0], [0, np.cos(theta), -np.sin(theta)],  [0, np.sin(theta), np.cos(theta)]])
