@@ -150,10 +150,10 @@ def sub_acceleration_analysis(sub):
     T3 = np.vstack([np.column_stack([np.eye(3), -sub.r3t]), np.column_stack([np.zeros((3, 3)), np.eye(3)])])
     T4 = np.vstack([np.column_stack([np.eye(3), -sub.r4t]), np.column_stack([np.zeros((3, 3)), np.eye(3)])])
 
-    dT1 = np.vstack([np.column_stack([np.eye(3), -sub.dr1t]), np.zeros((3, 6))])
-    dT2 = np.vstack([np.column_stack([np.eye(3), -sub.dr2t]), np.zeros((3, 6))])
-    dT3 = np.vstack([np.column_stack([np.eye(3), -sub.dr3t]), np.zeros((3, 6))])
-    dT4 = np.vstack([np.column_stack([np.eye(3), -sub.dr4t]), np.zeros((3, 6))])
+    dT1 = np.vstack([np.column_stack([np.zeros((3,3)), -sub.dr1t]), np.zeros((3, 6))])
+    dT2 = np.vstack([np.column_stack([np.zeros((3,3)), -sub.dr2t]), np.zeros((3, 6))])
+    dT3 = np.vstack([np.column_stack([np.zeros((3,3)), -sub.dr3t]), np.zeros((3, 6))])
+    dT4 = np.vstack([np.column_stack([np.zeros((3,3)), -sub.dr4t]), np.zeros((3, 6))])
 
     sub.R1 = np.concatenate([sub.dr1t @ sub.w1, np.zeros(3)])
     sub.R2 = np.concatenate([sub.dr2t @ sub.w2, np.zeros(3)])

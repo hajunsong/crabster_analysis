@@ -8,7 +8,6 @@ SubsystemLeft::SubsystemLeft(const Eigen::Vector3d &s01p, const Eigen::Matrix3d 
     ddq.setZero();
     q_init.setZero();
 
-
     this->s01p = s01p;
     this->C01 = C01;
 
@@ -41,7 +40,7 @@ SubsystemLeft::SubsystemLeft(const Eigen::Vector3d &s01p, const Eigen::Matrix3d 
            939.804, 67557.291, 151.395,
            39.970, 151.395, 155965.608;
     J3p *= 1e-6;
-    rho3p = Eigen::Vector3d(0, 238.39, -1.08)*1e-6;
+	rho3p = Eigen::Vector3d(0, 238.39, -1.08)*1e-3;
     C33 = euler_zxz(0, 0, 0);
     u_vec3 = Eigen::Vector3d::UnitZ();
 
@@ -99,7 +98,7 @@ SubsystemRight::SubsystemRight(const Eigen::Vector3d &s01p, const Eigen::Matrix3
            939.804, 67557.291, -151.395,
            -39.970, -151.395, 155965.608;
     J3p *= 1e-6;
-    rho3p = Eigen::Vector3d(0, -238.39, -1.08)*1e-6;
+	rho3p = Eigen::Vector3d(0, -238.39, -1.08)*1e-3;
     C33 = euler_zxz(0, 0, 0);
     u_vec3 = Eigen::Vector3d::UnitZ();
 
