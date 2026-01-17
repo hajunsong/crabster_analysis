@@ -4,15 +4,20 @@ sudo apt update
 sudo apt install -y build-essential cmake
 ```
 
-### eigen install
+### eigen library
 ```
-sudo apt update
-sudo apt install libeigen3-dev
+mkdir -p third_party
+git submodule add https://gitlab.com/libeigen/eigen.git third_party/eigen
+git submodule update --init --recursive
 ```
 
 ### python matplotlib
 ```
 sudo apt install python3-dev python3-matplotlib
+
+mkdir -p third_party
+cd third_party
+git clone https://github.com/lava/matplotlib-cpp.git
 ```
 
 ### build & run
