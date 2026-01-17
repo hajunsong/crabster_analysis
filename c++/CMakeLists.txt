@@ -8,6 +8,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Prefer config mode packages (works with most distros too)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
+# Python 개발 패키지 찾기
+find_package(Python3 COMPONENTS Development REQUIRED)
+
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/basebody.cpp
@@ -17,9 +20,13 @@ add_executable(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${Python3_INCLUDE_DIRS}
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Eigen3::Eigen)
+target_link_libraries(${PROJECT_NAME} PRIVATE 
+    Eigen3::Eigen
+    ${Python3_LIBRARIES}
+)
 
 # Nice warnings (optional)
 target_compile_options(${PROJECT_NAME} PRIVATE
