@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Prefer config mode packages (works with most distros too)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 add_executable(${PROJECT_NAME}
