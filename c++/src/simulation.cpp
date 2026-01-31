@@ -81,7 +81,7 @@ void Simulation::run(){
 		k3 = analysis(y3);
 		y4 = Y + dt*k3;
 		k4 = analysis(y4);
-		Y_next = Y + (dt/6.0)*(k1 + 2*k2 + 3*k3 + k4);
+		Y_next = Y + (dt/6.0)*(k1 + 2*k2 + 2*k3 + k4);
 		t_next = t_c + dt;
 
 		std::vector<double> row;
@@ -89,48 +89,11 @@ void Simulation::run(){
 		row.push_back(static_cast<double>(step));
 		row.push_back(t_c);
 
-		row.insert(row.end(), {FL.q[0], FL.q[1], FL.q[2], FL.q[3], 0.0f, 0.0f});
-		row.insert(row.end(), {FL.dq[0], FL.dq[1], FL.dq[2], FL.dq[3], 0.0f, 0.0f});
-		row.insert(row.end(), {FL.ddq[0], FL.ddq[1], FL.ddq[2], FL.ddq[3], 0.0f, 0.0f});
 		row.insert(row.end(), FL.re.data(), FL.re.data() + 3);
 		row.insert(row.end(), FL.rpy.data(), FL.rpy.data() + 3);
-
-		row.insert(row.end(), {ML.q[0], ML.q[1], ML.q[2], ML.q[3], 0.0f, 0.0f});
-		row.insert(row.end(), {ML.dq[0], ML.dq[1], ML.dq[2], ML.dq[3], 0.0f, 0.0f});
-		row.insert(row.end(), {ML.ddq[0], ML.ddq[1], ML.ddq[2], ML.ddq[3], 0.0f, 0.0f});
-		row.insert(row.end(), ML.re.data(), ML.re.data() + 3);
-		row.insert(row.end(), ML.rpy.data(), ML.rpy.data() + 3);
-
-		row.insert(row.end(), {RL.q[0], RL.q[1], RL.q[2], RL.q[3], 0.0f, 0.0f});
-		row.insert(row.end(), {RL.dq[0], RL.dq[1], RL.dq[2], RL.dq[3], 0.0f, 0.0f});
-		row.insert(row.end(), {RL.ddq[0], RL.ddq[1], RL.ddq[2], RL.ddq[3], 0.0f, 0.0f});
-		row.insert(row.end(), RL.re.data(), RL.re.data() + 3);
-		row.insert(row.end(), RL.rpy.data(), RL.rpy.data() + 3);
-
-		row.insert(row.end(), {FR.q[0], FR.q[1], FR.q[2], FR.q[3], 0.0f, 0.0f});
-		row.insert(row.end(), {FR.dq[0], FR.dq[1], FR.dq[2], FR.dq[3], 0.0f, 0.0f});
-		row.insert(row.end(), {FR.ddq[0], FR.ddq[1], FR.ddq[2], FR.ddq[3], 0.0f, 0.0f});
-		row.insert(row.end(), FR.re.data(), FR.re.data() + 3);
-		row.insert(row.end(), FR.rpy.data(), FR.rpy.data() + 3);
-
-		row.insert(row.end(), {MR.q[0], MR.q[1], MR.q[2], MR.q[3], 0.0f, 0.0f});
-		row.insert(row.end(), {MR.dq[0], MR.dq[1], MR.dq[2], MR.dq[3], 0.0f, 0.0f});
-		row.insert(row.end(), {MR.ddq[0], MR.ddq[1], MR.ddq[2], MR.ddq[3], 0.0f, 0.0f});
-		row.insert(row.end(), MR.re.data(), MR.re.data() + 3);
-		row.insert(row.end(), MR.rpy.data(), MR.rpy.data() + 3);
-
-		row.insert(row.end(), {RR.q[0], RR.q[1], RR.q[2], RR.q[3], 0.0f, 0.0f});
-		row.insert(row.end(), {RR.dq[0], RR.dq[1], RR.dq[2], RR.dq[3], 0.0f, 0.0f});
-		row.insert(row.end(), {RR.ddq[0], RR.ddq[1], RR.ddq[2], RR.ddq[3], 0.0f, 0.0f});
-		row.insert(row.end(), RR.re.data(), RR.re.data() + 3);
-		row.insert(row.end(), RR.rpy.data(), RR.rpy.data() + 3);
-
-		row.insert(row.end(), r0c.data(), r0c.data() + 3);
-		row.insert(row.end(), rpy0.data(), rpy0.data() + 3);
-		row.insert(row.end(), dr0c.data(), dr0c.data() + 3);
-		row.insert(row.end(), w0.data(), w0.data() + 3);
-		row.insert(row.end(), ddr0c.data(), ddr0c.data() + 3);
-		row.insert(row.end(), dw0.data(), dw0.data() + 3);
+		row.insert(row.end(), {FL.q[0], FL.q[1], FL.q[2], FL.q[3]});
+		row.insert(row.end(), {FL.dq[0], FL.dq[1], FL.dq[2], FL.dq[3]});
+		row.insert(row.end(), {FL.ddq[0], FL.ddq[1], FL.ddq[2], FL.ddq[3]});
 
 		log.push_back(std::move(row));
 
@@ -484,13 +447,13 @@ void Simulation::EQM()
 	ddq = M.ldlt().solve(Q);
 //	ddq = M.llt().solve(Q);
 	
-	dY0h = Y.segment<6>(0);
-	FL.ddq = Y.segment<4>(6);
-	ML.ddq = Y.segment<4>(10);
-	RL.ddq = Y.segment<4>(14);
-	FR.ddq = Y.segment<4>(18);
-	MR.ddq = Y.segment<4>(22);
-	RR.ddq = Y.segment<4>(26);
+	dY0h = ddq.segment<6>(0);
+	FL.ddq = ddq.segment<4>(6);
+	ML.ddq = ddq.segment<4>(10);
+	RL.ddq = ddq.segment<4>(14);
+	FR.ddq = ddq.segment<4>(18);
+	MR.ddq = ddq.segment<4>(22);
+	RR.ddq = ddq.segment<4>(26);
 }
 
 void Simulation::base_acceleration_analysis()
