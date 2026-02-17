@@ -1,49 +1,52 @@
 ﻿#include "simulation.h"
 
-Simulation::Simulation() : 
-            FL(FL_s01p, FL_C01), ML(ML_s01p, ML_C01), RL(RL_s01p, RL_C01),
-            FR(FR_s01p, FR_C01), MR(MR_s01p, MR_C01), RR(RR_s01p, RR_C01)
+Simulation::Simulation() : FL(FL_s01p, FL_C01)
 {
-	Y = VectorXd::Zero(61);
-	Yp = VectorXd::Zero(61);
+	Y = VectorXd::Zero(Y_SIZE);
+	Yp = VectorXd::Zero(Y_SIZE);
+
+	sub.push_back(FL);
 }
 
 Simulation::~Simulation(){
 }
 
 void Simulation::define_Y_vector(){
-    Y << r0, p0, dr0, w0,
-        FL.q_init, FL.dq, ML.q_init, ML.dq, RL.q_init, RL.dq,
-        FR.q_init, FR.dq, MR.q_init, MR.dq, RR.q_init, RR.dq;
+    // Y << r0, p0, dr0, w0,
+    //     FL.q_init, FL.dq, ML.q_init, ML.dq, RL.q_init, RL.dq,
+    //     FR.q_init, FR.dq, MR.q_init, MR.dq, RR.q_init, RR.dq;
+	Y << base.ri, base.pi, base.dri, base.wi, sub[0].q_init, sub[0].dq;
 }
 
-void Simulation::Y2qdq(Eigen::Vector<double, 61> Y)
+void Simulation::Y2qdq(Eigen::Vector<double, Y_SIZE> Y)
 {
-    r0 = Y.segment<3>(0);
-    p0 = Y.segment<4>(3);
-    dr0 = Y.segment<3>(7);
-    w0 = Y.segment<3>(10);
+    base.ri = Y.segment<3>(0);
+    base.pi = Y.segment<4>(3);
+    base.dri = Y.segment<3>(7);
+    base.wi = Y.segment<3>(10);
 
-    FL.q = Y.segment<4>(13);
-    FL.dq = Y.segment<4>(17);
-    ML.q = Y.segment<4>(21);
-    ML.dq = Y.segment<4>(25);
-    RL.q = Y.segment<4>(29);
-    RL.dq = Y.segment<4>(33);
+    sub[0].q = Y.segment<4>(13);
+    sub[0].dq = Y.segment<4>(17);
+    // ML.q = Y.segment<4>(21);
+    // ML.dq = Y.segment<4>(25);
+    // RL.q = Y.segment<4>(29);
+    // RL.dq = Y.segment<4>(33);
     
-    FR.q = Y.segment<4>(37);
-    FR.dq = Y.segment<4>(41);
-    MR.q = Y.segment<4>(45);
-    MR.dq = Y.segment<4>(49);
-    RR.q = Y.segment<4>(53);
-    RR.dq = Y.segment<4>(57);
+    // FR.q = Y.segment<4>(37);
+    // FR.dq = Y.segment<4>(41);
+    // MR.q = Y.segment<4>(45);
+    // MR.dq = Y.segment<4>(49);
+    // RR.q = Y.segment<4>(53);
+    // RR.dq = Y.segment<4>(57);
 }
 
-Eigen::Vector<double, 61> Simulation::dqddq2Yp()
+Eigen::Vector<double, Y_SIZE> Simulation::dqddq2Yp()
 {
-    Yp << dr0, dp0, ddr0, dw0,
-        FL.dq, FL.ddq, ML.dq, ML.ddq, RL.dq, RL.ddq,
-        FR.dq, FR.ddq, MR.dq, MR.ddq, RR.dq, RR.ddq;
+    // Yp << dr0, dp0, ddr0, dw0,
+    //     FL.dq, FL.ddq, ML.dq, ML.ddq, RL.dq, RL.ddq,
+    //     FR.dq, FR.ddq, MR.dq, MR.ddq, RR.dq, RR.ddq;
+	Yp << base.dri, base.dpi, base.ddri, base.dwi,
+			sub[0].dq, sub[0].ddq;
 
 	return Yp;
 }
@@ -57,14 +60,24 @@ void Simulation::run(){
     g = -9.80665;
 
 	Vector4d L_q_init(M_PI_4, 0, 0, -M_PI_4*3);
-	Vector4d R_q_init(-M_PI_4, 0, 0,  M_PI_4*3);
+	// Vector4d R_q_init(-M_PI_4, 0, 0,  M_PI_4*3);
 
-    FL.q_init = L_q_init;
-    ML.q_init = L_q_init;
-    RL.q_init = L_q_init;
-    FR.q_init = R_q_init;
-    MR.q_init = R_q_init;
-    RR.q_init = R_q_init;
+    sub[0].q_init = L_q_init;
+    // ML.q_init = L_q_init;
+    // RL.q_init = L_q_init;
+    // FR.q_init = R_q_init;
+    // MR.q_init = R_q_init;
+    // RR.q_init = R_q_init;
+
+	RSDA_K.push_back(15000);
+	RSDA_K.push_back(7000);
+	RSDA_K.push_back(7000);
+	RSDA_K.push_back(7000);
+
+	RSDA_C.push_back(1500);
+	RSDA_C.push_back(300);
+	RSDA_C.push_back(300);
+	RSDA_C.push_back(700);
 
     define_Y_vector();
 
@@ -89,11 +102,11 @@ void Simulation::run(){
 		row.push_back(static_cast<double>(step));
 		row.push_back(t_c);
 
-		row.insert(row.end(), FL.re.data(), FL.re.data() + 3);
-		row.insert(row.end(), FL.rpy.data(), FL.rpy.data() + 3);
-		row.insert(row.end(), {FL.q[0], FL.q[1], FL.q[2], FL.q[3]});
-		row.insert(row.end(), {FL.dq[0], FL.dq[1], FL.dq[2], FL.dq[3]});
-		row.insert(row.end(), {FL.ddq[0], FL.ddq[1], FL.ddq[2], FL.ddq[3]});
+		row.insert(row.end(), sub[0].re.data(), sub[0].re.data() + 3);
+		row.insert(row.end(), sub[0].rpy.data(), sub[0].rpy.data() + 3);
+		row.insert(row.end(), {sub[0].q[0], sub[0].q[1], sub[0].q[2], sub[0].q[3]});
+		row.insert(row.end(), {sub[0].dq[0], sub[0].dq[1], sub[0].dq[2], sub[0].dq[3]});
+		row.insert(row.end(), {sub[0].ddq[0], sub[0].ddq[1], sub[0].ddq[2], sub[0].ddq[3]});
 
 		log.push_back(std::move(row));
 
@@ -109,33 +122,30 @@ void Simulation::run(){
 	std::cout << "[OK] saved: " << out_csv << "  rows=" << log.size() << "\n";
 }
 
-Eigen::Vector<double, 61> Simulation::analysis(Eigen::Vector<double, 61> Y)
+Eigen::Vector<double, Y_SIZE> Simulation::analysis(Eigen::Vector<double, Y_SIZE> Y)
 {
 	Y2qdq(Y);
 
     base_position_analysis();
     base_velocity_analysis();
 
-	sub_position_analysis(FL);
-	sub_position_analysis(ML);
-	sub_position_analysis(RL);
-	sub_position_analysis(FR);
-	sub_position_analysis(MR);
-	sub_position_analysis(RR);
+	for(Subsystem &s : sub){
+		sub_position_analysis(s);
+		sub_velocity_analysis(s);
+	}
 
-	sub_velocity_analysis(FL);
-	sub_velocity_analysis(ML);
-	sub_velocity_analysis(RL);
-	sub_velocity_analysis(FR);
-	sub_velocity_analysis(MR);
-	sub_velocity_analysis(RR);
+	// for(int i = 0; i < N_SUB; i++){
+	// 	sub_position_analysis(&sub[i]);
+	// 	sub_velocity_analysis(&sub[i]);
+	// }
 
-	sub_mass_force_analysis(FL);
-	sub_mass_force_analysis(ML);
-	sub_mass_force_analysis(RL);
-	sub_mass_force_analysis(FR);
-	sub_mass_force_analysis(MR);
-	sub_mass_force_analysis(RR);
+	for(Subsystem &s : sub){
+		sub_mass_force_analysis(s);
+	}
+
+	// for(int i = 0; i < N_SUB; i++){
+	// 	sub_mass_force_analysis(&sub[i]);
+	// }
     
     base_mass_force_analysis();
 
@@ -143,12 +153,12 @@ Eigen::Vector<double, 61> Simulation::analysis(Eigen::Vector<double, 61> Y)
 
     base_acceleration_analysis();
 
-	sub_acceleration_analysis(FL);
-	sub_acceleration_analysis(ML);
-	sub_acceleration_analysis(RL);
-	sub_acceleration_analysis(FR);
-	sub_acceleration_analysis(MR);
-	sub_acceleration_analysis(RR);
+	for(Subsystem &s : sub){
+		sub_acceleration_analysis(s);
+	}
+	// for(int i = 0; i < N_SUB; i++){
+	// 	sub_acceleration_analysis(&sub[i]);
+	// }
 
 	Yp = dqddq2Yp();
 
@@ -157,358 +167,237 @@ Eigen::Vector<double, 61> Simulation::analysis(Eigen::Vector<double, 61> Y)
 
 void Simulation::base_position_analysis()
 {
-    double q0 = p0[0];
-	Vector3d qv = p0.segment<3>(1);
+    double q = base.pi[0];
+	Vector3d qv = base.pi.segment<3>(1);
 	Matrix3d S = skew(qv);
 	Matrix3d I = Eigen::Matrix3d::Identity();
 
     // E0 = [-qv, S + q0*I]
-    E0.col(0) = -qv;
-    E0.block<3,3>(0,1) = S + q0*I;
+    base.Ei.col(0) = -qv;
+    base.Ei.block<3,3>(0,1) = S + q*I;
 
     // G0 = [-qv, -S + q0*I]
-    G0.col(0) = -qv;
-    G0.block<3,3>(0,1) = -S + q0*I;
+    base.Gi.col(0) = -qv;
+    base.Gi.block<3,3>(0,1) = -S + q*I;
 
-	A0 = E0*G0.transpose();
-	rpy0 = mat2rpy(A0);
+	base.Ai = base.Ei*base.Gi.transpose();
+	base.rpy = mat2rpy(base.Ai);
 
-	rho0 = A0*rho0p;
-	r0c = r0 + rho0;
+	base.rhoi = base.Ai*base.rhoip;
+	base.ric = base.ri + base.rhoi;
 }
 
 void Simulation::base_velocity_analysis()
 {
-	w0t = skew(w0);
-	r0t = skew(r0);
-	dr0t = skew(dr0);
-	dr0c = dr0 + w0t*rho0;
+	base.wit = skew(base.wi);
+	base.rit = skew(base.ri);
+	base.drit = skew(base.dri);
+	base.dric = base.dri + base.wit*base.rhoi;
 
-	Y0h << dr0 + dr0t*w0, w0;
+	base.Yih << base.dri + base.drit*base.wi, base.wi;
 }
 
 void Simulation::sub_position_analysis(Subsystem &sub)
 {
-	sub.A01pp << cos(sub.q[0]), -sin(sub.q[0]), 0, sin(sub.q[0]), cos(sub.q[0]), 0, 0, 0, 1;
-	sub.A12pp << cos(sub.q[1]), -sin(sub.q[1]), 0, sin(sub.q[1]), cos(sub.q[1]), 0, 0, 0, 1;
-	sub.A23pp << cos(sub.q[2]), -sin(sub.q[2]), 0, sin(sub.q[2]), cos(sub.q[2]), 0, 0, 0, 1;
-	sub.A34pp << cos(sub.q[3]), -sin(sub.q[3]), 0, sin(sub.q[3]), cos(sub.q[3]), 0, 0, 0, 1;
+	int i = 0;
+	for(Body &b : sub.body){
+		b.Aijpp << cos(sub.q[i]), -sin(sub.q[i]), 0, sin(sub.q[i]), cos(sub.q[i]), 0, 0, 0, 1;
+		i++;
+	}
 
-	sub.A1 = A0*sub.C01*sub.A01pp;
-	sub.A2 = sub.A1*sub.C12*sub.A12pp;
-	sub.A3 = sub.A2*sub.C23*sub.A23pp;
-	sub.A4 = sub.A3*sub.C34*sub.A34pp;
+	Body *prev = &base;
+	for(Body &body : sub.body){
+		body.Ai = prev->Ai*body.Cij*body.Aijpp;
+		body.sij = prev->Ai*body.sijp;
+		body.ri = prev->ri + body.sij;
+		body.rhoi = body.Ai*body.rhoip;
+		body.ric = body.ri + body.rhoi;
+		prev = &body;
+	}
 
-	sub.s01 = A0*sub.s01p;
-	sub.s12 = sub.A1*sub.s12p;
-	sub.s23 = sub.A2*sub.s23p;
-	sub.s34 = sub.A3*sub.s34p;
-
-	sub.r1 = r0 + sub.s01;
-	sub.r2 = sub.r1 + sub.s12;
-	sub.r3 = sub.r2 + sub.s23;
-	sub.r4 = sub.r3 + sub.s34;
-
-	sub.rho1 = sub.A1*sub.rho1p;
-	sub.rho2 = sub.A2*sub.rho2p;
-	sub.rho3 = sub.A3*sub.rho3p;
-	sub.rho4 = sub.A4*sub.rho4p;
-
-	sub.r1c = sub.r1 + sub.rho1;
-	sub.r2c = sub.r2 + sub.rho2;
-	sub.r3c = sub.r3 + sub.rho3;
-	sub.r4c = sub.r4 + sub.rho4;
-
-	sub.s4e = sub.A4*sub.s4ep;
-	sub.re = sub.r4 + sub.s4e;
-	sub.Ae = sub.A4*sub.C4e;
+	sub.body[3].se = sub.body[3].Ai*sub.body[3].sep;
+	sub.re = sub.body[3].ri + sub.body[3].se;
+	sub.Ae = sub.body[3].Ai*sub.body[3].Ce;
 	sub.rpy = mat2rpy(sub.Ae);
 }
 
 void Simulation::sub_velocity_analysis(Subsystem &sub)
 {
-	sub.H1 = A0*sub.C01*sub.u_vec1;
-	sub.H2 = sub.A1*sub.C12*sub.u_vec2;
-	sub.H3 = sub.A2*sub.C23*sub.u_vec3;
-	sub.H4 = sub.A3*sub.C34*sub.u_vec4;
+	int i = 0;
+	Body *prev = &base;
+	for(Body &body : sub.body){
+		body.Hi = prev->Ai*body.Cij*body.u_vec;
+		body.wi = prev->wi + body.Hi*sub.dq[i];
+		body.wit = skew(body.wi);
+		body.dri = prev->dri + prev->wit*body.sij;
+		body.rit = skew(body.ri);
 
-	sub.w1 = w0 + sub.H1*sub.dq[0];
-	sub.w2 = sub.w1 + sub.H2*sub.dq[1];
-	sub.w3 = sub.w2 + sub.H3*sub.dq[2];
-	sub.w4 = sub.w3 + sub.H4*sub.dq[3];
+		body.Bi << body.rit*body.Hi, body.Hi;
+		body.drit = skew(body.dri);
+		body.dric = body.dri + body.wit*body.rhoi;
+		body.dHi = prev->wit*body.Hi;
+		body.Di << body.drit*body.Hi + body.rit*body.dHi, body.dHi;
+		body.Di *= sub.dq[i];
+		body.Yih = prev->Yih + body.Bi*sub.dq[i];
 
-	sub.w1t = skew(sub.w1);
-	sub.w2t = skew(sub.w2);
-	sub.w3t = skew(sub.w3);
-	sub.w4t = skew(sub.w4);
+		prev = &body;
+		i++;
+	}
 
-	sub.dr1 = dr0 + w0t*sub.s01;
-	sub.dr2 = sub.dr1 + sub.w1t*sub.s12;
-	sub.dr3 = sub.dr2 + sub.w2t*sub.s23;
-	sub.dr4 = sub.dr3 + sub.w3t*sub.s34;
-
-	sub.r1t = skew(sub.r1);
-	sub.r2t = skew(sub.r2);
-	sub.r3t = skew(sub.r3);
-	sub.r4t = skew(sub.r4);
-
-	sub.dre = sub.dr4 + sub.w4t*sub.r4;
-
-	sub.B1 << sub.r1t*sub.H1, sub.H1;
-	sub.B2 << sub.r2t*sub.H2, sub.H2;
-	sub.B3 << sub.r3t*sub.H3, sub.H3;
-	sub.B4 << sub.r4t*sub.H4, sub.H4;
-
-	sub.dr1t = skew(sub.dr1);
-	sub.dr2t = skew(sub.dr2);
-	sub.dr3t = skew(sub.dr3);
-	sub.dr4t = skew(sub.dr4);
-
-	sub.dr1c = sub.dr1 + sub.w1t*sub.rho1;
-	sub.dr2c = sub.dr2 + sub.w2t*sub.rho2;
-	sub.dr3c = sub.dr3 + sub.w3t*sub.rho3;
-	sub.dr4c = sub.dr4 + sub.w4t*sub.rho4;
-
-	sub.dH1 = w0t*sub.H1;
-	sub.dH2 = sub.w1t*sub.H2;
-	sub.dH3 = sub.w2t*sub.H3;
-	sub.dH4 = sub.w3t*sub.H4;
-
-	sub.D1 << sub.dr1t*sub.H1 + sub.r1t*sub.dH1, sub.dH1; sub.D1 *= sub.dq[0];
-	sub.D2 << sub.dr2t*sub.H2 + sub.r2t*sub.dH2, sub.dH2; sub.D2 *= sub.dq[1];
-	sub.D3 << sub.dr3t*sub.H3 + sub.r3t*sub.dH3, sub.dH3; sub.D3 *= sub.dq[2];
-	sub.D4 << sub.dr4t*sub.H4 + sub.r4t*sub.dH4, sub.dH4; sub.D4 *= sub.dq[3];
-
-	sub.Y1h = Y0h + sub.B1*sub.dq[0];
-	sub.Y2h = sub.Y1h + sub.B2*sub.dq[1];
-	sub.Y3h = sub.Y2h + sub.B3*sub.dq[2];
-	sub.Y4h = sub.Y3h + sub.B4*sub.dq[3];
+	sub.dre = sub.body[3].dri + sub.body[3].wit*sub.body[3].ri;
 }
 
 void Simulation::sub_mass_force_analysis(Subsystem &sub)
 {
-	sub.A1_C11 = sub.A1*sub.C11;
-	sub.A2_C22 = sub.A2*sub.C22;
-	sub.A3_C33 = sub.A3*sub.C33;
-	sub.A4_C44 = sub.A4*sub.C44;
+	for(Body &body : sub.body){
+		body.Ai_Cii = body.Ai*body.Cii;
+		body.Jic = body.Ai_Cii*body.Jip*body.Ai_Cii.transpose();
+		body.rict = skew(body.ric);
+		body.drict = skew(body.dric);
+		
+		body.fic = Vector3d(0, 0, body.mi*g);
+		body.tic = Vector3d(0, 0, 0);
 
-	sub.J1c = sub.A1_C11*sub.J1p*sub.A1_C11.transpose();
-	sub.J2c = sub.A2_C22*sub.J2p*sub.A2_C22.transpose();
-	sub.J3c = sub.A3_C33*sub.J3p*sub.A3_C33.transpose();
-	sub.J4c = sub.A4_C44*sub.J4p*sub.A4_C44.transpose();
+		body.Mih_11 = body.mi*Matrix3d::Identity();
+		body.Mih_12 = -body.mi*body.rict;
+		body.Mih_22 = body.Jic - body.mi*body.rict*body.rict;
 
-	sub.r1ct = skew(sub.r1c);
-	sub.r2ct = skew(sub.r2c);
-	sub.r3ct = skew(sub.r3c);
-	sub.r4ct = skew(sub.r4c);
+		body.Mih.block<3, 3>(0, 0) = body.Mih_11;
+		body.Mih.block<3, 3>(0, 3) = body.Mih_12;
+		body.Mih.block<3, 3>(3, 0) = -body.Mih_12;
+		body.Mih.block<3, 3>(3, 3) = body.Mih_22;
 
-	sub.dr1ct = skew(sub.dr1c);
-	sub.dr2ct = skew(sub.dr2c);
-	sub.dr3ct = skew(sub.dr3c);
-	sub.dr4ct = skew(sub.dr4c);
+		body.Qih << body.fic + body.mi*body.drict*body.wi,
+				body.tic + body.rict*body.fic + body.mi*body.rict*body.drict*body.wi - body.wit*body.Jic*body.wi;
+	}
+		
+	// RSDA Force
+	for(int i = 0; i < N_BODY; i++){
+		sub.body[i].Ti_RSDA = RSDA_K[i]*(sub.q_init[i] - sub.q[i]) - RSDA_C[i]*sub.dq[i];
+		sub.body[i].Qijh_RSDA << Vector3d::Zero(), sub.body[i].Ti_RSDA*sub.body[i].Hi;
+		sub.body[i].Qjih_RSDA = -sub.body[i].Qijh_RSDA;
+		sub.body[i].Qih += sub.body[i].Qijh_RSDA;
+	}
 
-	sub.f1c = Vector3d(0, 0, sub.m1*g);
-	sub.f2c = Vector3d(0, 0, sub.m2*g);
-	sub.f3c = Vector3d(0, 0, sub.m3*g);
-	sub.f4c = Vector3d(0, 0, sub.m4*g);
+	// Contact Force
 
-	sub.t1c = Vector3d(0, 0, 0);
-	sub.t2c = Vector3d(0, 0, 0);
-	sub.t3c = Vector3d(0, 0, 0);
-	sub.t4c = Vector3d(0, 0, 0);
+	// Applied Force
 
-	sub.M1h_11 = sub.m1*Matrix3d::Identity();
-	sub.M1h_12 = -sub.m1*sub.r1ct;
-	sub.M1h_22 = sub.J1c - sub.m1*sub.r1ct*sub.r1ct;
+	sub.body[3].Ki = sub.body[3].Mih;
+	sub.body[3].Li = sub.body[3].Qih;
+	for(int i = 2; i >= 0; --i){
+		sub.body[i].Ki = sub.body[i].Mih + sub.body[i + 1].Ki;
+		sub.body[i].Li = sub.body[i].Qih + sub.body[i + 1].Li - sub.body[i + 1].Ki*sub.body[i + 1].Di + sub.body[i + 1].Qjih_RSDA;
+	}
 
-	sub.M1h.block<3,3>(0, 0) = sub.M1h_11;
-	sub.M1h.block<3,3>(0, 3) = sub.M1h_12;
-	sub.M1h.block<3,3>(3, 0) = -sub.M1h_12;
-	sub.M1h.block<3,3>(3, 3) = sub.M1h_22;
+	for(int i = 0; i < 4; i++){
+		for(int j = 0; j < 4; j++){
+			int k = i > j ? i : j;
+			sub.M(i, j) = sub.body[i].Bi.transpose()*sub.body[k].Ki*sub.body[j].Bi;
+		}
+	}
+	Vector6d D_sum = Vector6d::Zero();
+	for(int i = 0; i < 4; i++){
+		D_sum += sub.body[i].Di;
+		sub.Q(i) = sub.body[i].Bi.transpose()*(sub.body[i].Li - sub.body[i].Ki*D_sum);
+	}
 
-	sub.M2h_11 = sub.m2*Matrix3d::Identity();
-	sub.M2h_12 = -sub.m2*sub.r2ct;
-	sub.M2h_22 = sub.J2c - sub.m2*sub.r2ct*sub.r2ct;
-
-	sub.M2h.block<3,3>(0, 0) = sub.M2h_11;
-	sub.M2h.block<3,3>(0, 3) = sub.M2h_12;
-	sub.M2h.block<3,3>(3, 0) = -sub.M2h_12;
-	sub.M2h.block<3,3>(3, 3) = sub.M2h_22;
-
-	sub.M3h_11 = sub.m3*Matrix3d::Identity();
-	sub.M3h_12 = -sub.m3*sub.r3ct;
-	sub.M3h_22 = sub.J3c - sub.m3*sub.r3ct*sub.r3ct;
-
-	sub.M3h.block<3,3>(0, 0) = sub.M3h_11;
-	sub.M3h.block<3,3>(0, 3) = sub.M3h_12;
-	sub.M3h.block<3,3>(3, 0) = -sub.M3h_12;
-	sub.M3h.block<3,3>(3, 3) = sub.M3h_22;
-
-	sub.M4h_11 = sub.m4*Matrix3d::Identity();
-	sub.M4h_12 = -sub.m4*sub.r4ct;
-	sub.M4h_22 = sub.J4c - sub.m4*sub.r4ct*sub.r4ct;
-
-	sub.M4h.block<3,3>(0, 0) = sub.M4h_11;
-	sub.M4h.block<3,3>(0, 3) = sub.M4h_12;
-	sub.M4h.block<3,3>(3, 0) = -sub.M4h_12;
-	sub.M4h.block<3,3>(3, 3) = sub.M4h_22;
-
-	sub.Q1h << sub.f1c + sub.m1*sub.dr1ct*sub.w1,
-			sub.t1c + sub.r1ct*sub.f1c + sub.m1*sub.r1ct*sub.dr1ct*sub.w1 - sub.w1t*sub.J1c*sub.w1;
-	sub.Q2h << sub.f2c + sub.m2*sub.dr2ct*sub.w2,
-			sub.t2c + sub.r2ct*sub.f2c + sub.m2*sub.r2ct*sub.dr2ct*sub.w2 - sub.w2t*sub.J2c*sub.w2;
-	sub.Q3h << sub.f3c + sub.m3*sub.dr3ct*sub.w3,
-			sub.t3c + sub.r3ct*sub.f3c + sub.m3*sub.r3ct*sub.dr3ct*sub.w3 - sub.w3t*sub.J3c*sub.w3;
-	sub.Q4h << sub.f4c + sub.m4*sub.dr4ct*sub.w4,
-			sub.t4c + sub.r4ct*sub.f4c + sub.m4*sub.r4ct*sub.dr4ct*sub.w4 - sub.w4t*sub.J4c*sub.w4;
-
-	sub.K4 = sub.M4h;
-	sub.K3 = sub.M3h + sub.K4;
-	sub.K2 = sub.M2h + sub.K3;
-	sub.K1 = sub.M1h + sub.K2;
-
-	sub.L4 = sub.Q4h;
-	sub.L3 = sub.Q3h + sub.L4 - sub.K4*sub.D4;
-	sub.L2 = sub.Q2h + sub.L3 - sub.K3*sub.D3;
-	sub.L1 = sub.Q1h + sub.L2 - sub.K2*sub.D2;
-
-	sub.M(0,0) = sub.B1.transpose()*sub.K1*sub.B1;
-	sub.M(0,1) = sub.B1.transpose()*sub.K2*sub.B2;
-	sub.M(0,2) = sub.B1.transpose()*sub.K3*sub.B3;
-	sub.M(0,3) = sub.B1.transpose()*sub.K4*sub.B4;
-
-	sub.M(1,0) = sub.B2.transpose()*sub.K2*sub.B1;
-	sub.M(1,1) = sub.B2.transpose()*sub.K2*sub.B2;
-	sub.M(1,2) = sub.B2.transpose()*sub.K3*sub.B3;
-	sub.M(1,3) = sub.B2.transpose()*sub.K4*sub.B4;
-
-	sub.M(2,0) = sub.B3.transpose()*sub.K3*sub.B1;
-	sub.M(2,1) = sub.B3.transpose()*sub.K3*sub.B2;
-	sub.M(2,2) = sub.B3.transpose()*sub.K3*sub.B3;
-	sub.M(2,3) = sub.B3.transpose()*sub.K4*sub.B4;
-
-	sub.M(3,0) = sub.B4.transpose()*sub.K4*sub.B1;
-	sub.M(3,1) = sub.B4.transpose()*sub.K4*sub.B2;
-	sub.M(3,2) = sub.B4.transpose()*sub.K4*sub.B3;
-	sub.M(3,3) = sub.B4.transpose()*sub.K4*sub.B4;
-
-	sub.Q(0) = sub.B1.transpose()*(sub.L1 - sub.K1*(sub.D1));
-	sub.Q(1) = sub.B2.transpose()*(sub.L2 - sub.K2*(sub.D1 + sub.D2));
-	sub.Q(2) = sub.B3.transpose()*(sub.L3 - sub.K3*(sub.D1 + sub.D2 + sub.D3));
-	sub.Q(3) = sub.B4.transpose()*(sub.L4 - sub.K4*(sub.D1 + sub.D2 + sub.D3 + sub.D4));
-
-	sub.Myq.col(0) = sub.K1*sub.B1;
-	sub.Myq.col(1) = sub.K2*sub.B2;
-	sub.Myq.col(2) = sub.K3*sub.B3;
-	sub.Myq.col(3) = sub.K4*sub.B4;
+	for(int i = 0; i < 4; i++){
+		sub.Myq.col(i) = sub.body[i].Ki*sub.body[i].Bi;
+	}
 }
 
 void Simulation::base_mass_force_analysis()
 {
-	A0_C00 = A0*C00;
-	J0c = A0_C00*J0p*A0_C00.transpose();
+	base.Ai_Cii = base.Ai*base.Cii;
+	base.Jic = base.Ai_Cii*base.Jip*base.Ai_Cii.transpose();
 
-	r0ct = skew(r0c);
-	dr0ct = skew(dr0c);
+	base.rict = skew(base.ric);
+	base.drict = skew(base.dric);
 
-	f0c = Vector3d(0, 0, m0*g);
-	t0c = Vector3d(0, 0, 0);
+	base.fic = Vector3d(0, 0, base.mi*g);
+	base.tic = Vector3d(0, 0, 0);
 
-	M0h_11 = m0*Matrix3d::Identity();
-	M0h_12 = -m0*r0ct;
-	M0h_22 = J0c - m0*r0ct*r0ct;
-	M0h.block<3,3>(0,0) = M0h_11;
-	M0h.block<3,3>(0,3) = M0h_12;
-	M0h.block<3,3>(3,0) = -M0h_11;
-	M0h.block<3,3>(3,3) = M0h_11;
+	base.Mih_11 = base.mi*Matrix3d::Identity();
+	base.Mih_12 = -base.mi*base.rict;
+	base.Mih_22 = base.Jic - base.mi*base.rict*base.rict;
+	base.Mih.block<3,3>(0,0) = base.Mih_11;
+	base.Mih.block<3,3>(0,3) = base.Mih_12;
+	base.Mih.block<3,3>(3,0) = -base.Mih_12;
+	base.Mih.block<3,3>(3,3) = base.Mih_22;
 
-	Q0h << f0c + m0*dr0ct*w0,
-			t0c + r0ct*f0c + m0*dr0ct*w0 - w0t*J0c*w0;
+	base.Qih << base.fic + base.mi*base.drict*base.wi,
+			base.tic + base.rict*base.fic + base.mi*base.drict*base.wi - base.wit*base.Jic*base.wi;
 
-	K0 = M0h + FL.K1 + ML.K1 + RL.K1 + FR.K1 + MR.K1 + RR.K1;
-	L0 = Q0h + FL.L1 + ML.L1 + RL.L1 + FR.L1 + MR.L1 + RR.L1
-			- (FL.K1*FL.D1 + ML.K1*ML.D1 + RL.K1*RL.D1 + FR.K1*FR.D1 + MR.K1*MR.D1 + RR.K1*RR.D1);
+	// K0 = M0h + FL.K1 + ML.K1 + RL.K1 + FR.K1 + MR.K1 + RR.K1;
+	// L0 = Q0h + FL.L1 + ML.L1 + RL.L1 + FR.L1 + MR.L1 + RR.L1
+	// 		- (FL.K1*FL.D1 + ML.K1*ML.D1 + RL.K1*RL.D1 + FR.K1*FR.D1 + MR.K1*MR.D1 + RR.K1*RR.D1);
+
+	base.Ki = base.Mih + sub[0].body[0].Ki;
+	base.Li = base.Qih + sub[0].body[0].Li - sub[0].body[0].Ki*sub[0].body[0].Di;
 }
 
 void Simulation::EQM()
 {
 	M.setZero();
 	M.block<6,6>(0,0) = Matrix6d::Identity();
-	M.block<4,4>(6,6) = FL.M;
-	M.block<4,4>(10,10) = ML.M;
-	M.block<4,4>(14,14) = RL.M;
-	M.block<4,4>(18,18) = FR.M;
-	M.block<4,4>(22,22) = MR.M;
-	M.block<4,4>(26,26) = RR.M;
+	M.block<4,4>(6,6) = sub[0].M;
+	// M.block<4,4>(10,10) = ML.M;
+	// M.block<4,4>(14,14) = RL.M;
+	// M.block<4,4>(18,18) = FR.M;
+	// M.block<4,4>(22,22) = MR.M;
+	// M.block<4,4>(26,26) = RR.M;
 
 	Q.setZero();
-	Q << Vector6d::Zero(), FL.Q, ML.Q, RL.Q, FR.Q, MR.Q, RR.Q;
+	Q << Vector6d::Zero(), sub[0].Q;//, ML.Q, RL.Q, FR.Q, MR.Q, RR.Q;
 
 	ddq = M.ldlt().solve(Q);
-//	ddq = M.llt().solve(Q);
-	
-	dY0h = ddq.segment<6>(0);
-	FL.ddq = ddq.segment<4>(6);
-	ML.ddq = ddq.segment<4>(10);
-	RL.ddq = ddq.segment<4>(14);
-	FR.ddq = ddq.segment<4>(18);
-	MR.ddq = ddq.segment<4>(22);
-	RR.ddq = ddq.segment<4>(26);
+	// ddq = M.llt().solve(Q);
+
+	base.dYih = ddq.segment<6>(0);
+	sub[0].ddq = ddq.segment<4>(6);
+	// ML.ddq = ddq.segment<4>(10);
+	// RL.ddq = ddq.segment<4>(14);
+	// FR.ddq = ddq.segment<4>(18);
+	// MR.ddq = ddq.segment<4>(22);
+	// RR.ddq = ddq.segment<4>(26);
 }
 
 void Simulation::base_acceleration_analysis()
 {
-	dp0 = 0.5*E0.transpose()*w0;
+	base.dpi = 0.5*base.Ei.transpose()*base.wi;
 
-	T0.block<3,3>(0,0) = Matrix3d::Identity();
-	T0.block<3,3>(0,3) = -r0t;
-	T0.block<3,3>(3,0) = Matrix3d::Zero();
-	T0.block<3,3>(3,3) = Matrix3d::Identity();
+	base.Ti.block<3,3>(0,0) = Matrix3d::Identity();
+	base.Ti.block<3,3>(0,3) = -base.rit;
+	base.Ti.block<3,3>(3,0) = Matrix3d::Zero();
+	base.Ti.block<3,3>(3,3) = Matrix3d::Identity();
 
-	R0 << dr0t*w0, Vector3d::Zero();
-	dY0b = T0*dY0h - R0;
+	base.Ri << base.drit*base.wi, Vector3d::Zero();
+	base.dYib = base.Ti*base.dYih - base.Ri;
 
-	ddr0 = dY0b.segment<3>(0);
-	dw0 = dY0b.segment<3>(3);
+	base.ddri = base.dYib.segment<3>(0);
+	base.dwi = base.dYib.segment<3>(3);
 
-	dw0t = skew(dw0);
-	ddr0c = ddr0 + dw0t*rho0 + w0t*w0t*rho0;
+	base.dwit = skew(base.dwi);
+	base.ddric = base.ddri + base.dwit*base.rhoi + base.wit*base.wit*base.rhoi;
 }
 
 void Simulation::sub_acceleration_analysis(Subsystem &sub)
 {
-	sub.dY1h = dY0h + sub.B1*sub.ddq[0] + sub.D1;
-	sub.dY2h = sub.dY1h + sub.B2*sub.ddq[1] + sub.D2;
-	sub.dY3h = sub.dY2h + sub.B3*sub.ddq[2] + sub.D3;
-	sub.dY4h = sub.dY3h + sub.B4*sub.ddq[3] + sub.D4;
-
-	sub.T1.setIdentity();	sub.T1.block<3,3>(0,3) = -sub.r1t;
-	sub.T2.setIdentity();	sub.T2.block<3,3>(0,3) = -sub.r2t;
-	sub.T3.setIdentity();	sub.T3.block<3,3>(0,3) = -sub.r3t;
-	sub.T4.setIdentity();	sub.T4.block<3,3>(0,3) = -sub.r4t;
-
-	sub.dT1.setZero();	sub.dT1.block<3,3>(0,3) = -sub.dr1t;
-	sub.dT2.setZero();	sub.dT2.block<3,3>(0,3) = -sub.dr2t;
-	sub.dT3.setZero();	sub.dT3.block<3,3>(0,3) = -sub.dr3t;
-	sub.dT4.setZero();	sub.dT4.block<3,3>(0,3) = -sub.dr4t;
-
-	sub.R1 << sub.dr1t*sub.w1, Vector3d::Zero();
-	sub.R2 << sub.dr2t*sub.w2, Vector3d::Zero();
-	sub.R3 << sub.dr3t*sub.w3, Vector3d::Zero();
-	sub.R4 << sub.dr4t*sub.w4, Vector3d::Zero();
-
-	sub.dY1b = sub.dT1*sub.Y1h + sub.T1*sub.dY1h;
-	sub.dY2b = sub.dT2*sub.Y2h + sub.T2*sub.dY2h;
-	sub.dY3b = sub.dT3*sub.Y3h + sub.T3*sub.dY3h;
-	sub.dY4b = sub.dT4*sub.Y4h + sub.T4*sub.dY4h;
-
-	sub.ddr1 = sub.dY1b.segment<3>(0); sub.dw1 = sub.dY1b.segment<3>(3);
-	sub.ddr2 = sub.dY2b.segment<3>(0); sub.dw2 = sub.dY2b.segment<3>(3);
-	sub.ddr3 = sub.dY3b.segment<3>(0); sub.dw3 = sub.dY3b.segment<3>(3);
-	sub.ddr4 = sub.dY4b.segment<3>(0); sub.dw4 = sub.dY4b.segment<3>(3);
-
-	sub.ddr1c = sub.ddr1 + sub.dw1t*sub.rho1 + sub.w1t*sub.w1t*sub.rho1;
-	sub.ddr2c = sub.ddr2 + sub.dw2t*sub.rho2 + sub.w2t*sub.w2t*sub.rho2;
-	sub.ddr3c = sub.ddr3 + sub.dw3t*sub.rho3 + sub.w3t*sub.w3t*sub.rho3;
-	sub.ddr4c = sub.ddr4 + sub.dw4t*sub.rho4 + sub.w4t*sub.w4t*sub.rho4;
+	Body *prev = &base;
+	int i = 0;
+	for(Body &body : sub.body){
+		body.dYih = prev->dYih + body.Bi*sub.ddq[i] + body.Di;
+		body.Ti.setIdentity();
+		body.Ti.block<3, 3>(0, 3) = -body.rit;
+		body.dTi.setZero();
+		body.dTi.block<3, 3>(0, 3) = -body.drit;
+		body.Ri << body.drit*body.wi, Vector3d::Zero();
+		body.dYib = body.dTi*body.Yih + body.Ti*body.dYih;
+		body.ddri = body.dYib.segment<3>(0);
+		body.dwi = body.dYib.segment<3>(3);
+		body.ddric = body.ddri + body.dwit*body.rhoi + body.wit*body.wit*body.rhoi;
+		i++;
+		prev = &body;
+	}
 }

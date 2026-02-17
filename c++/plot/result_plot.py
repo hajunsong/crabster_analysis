@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-
 def compare_csv(rec_csv="rec_data.csv", sim_csv="rec_data_fix_free_fall.csv"):
     # read both as raw numeric logs
     rec = pd.read_csv(rec_csv, header=None)
@@ -27,7 +26,7 @@ def compare_csv(rec_csv="rec_data.csv", sim_csv="rec_data_fix_free_fall.csv"):
             axes2[0][i].set_ylabel("Displacement [mm]")
             axes2[0][i].set_title(f"{txt_title[j]} {sub_title[i]} Position")
             axes2[0][i].grid()
-            axes[1][i].set_xlim(0,2)
+            axes2[0][i].set_xlim(0,2)
 
             if i == 3:
                 axes2[0][i].legend()
@@ -43,7 +42,7 @@ def compare_csv(rec_csv="rec_data.csv", sim_csv="rec_data_fix_free_fall.csv"):
             axes2[1][i].set_ylabel("Displacement [rad]")
             axes2[1][i].set_title(f"{txt_title[j]} {sub_title[i]} Orientation")
             axes2[1][i].grid()
-            axes[1][i].set_xlim(0,2)
+            axes2[1][i].set_xlim(0,2)
 
         fig, axes = plt.subplots(3, 4, figsize=(10, 6), constrained_layout=True)
         for i in range(0, 4):
@@ -56,7 +55,7 @@ def compare_csv(rec_csv="rec_data.csv", sim_csv="rec_data_fix_free_fall.csv"):
             axes[0][i].set_ylabel(f"Displacement [rad]")
             axes[0][i].set_title(f"{txt_title[j]} q_{i + 1}")
             axes[0][i].grid()
-            axes[1][i].set_xlim(0,2)
+            axes[0][i].set_xlim(0,2)
 
             if i == 3:
                 axes[0][i].legend()
@@ -83,12 +82,11 @@ def compare_csv(rec_csv="rec_data.csv", sim_csv="rec_data_fix_free_fall.csv"):
             axes[2][i].set_ylabel(f"Acceleration [rad/s^2]")
             axes[2][i].set_title(f"{txt_title[j]} ddq_{i + 1}")
             axes[2][i].grid()
-            axes[1][i].set_xlim(0,2)
+            axes[2][i].set_xlim(0,2)
 
     plt.show()
 
-
 if __name__ == "__main__":
     current_file_path = Path(__file__).resolve().parent
-    compare_csv(str(current_file_path) + "/../data/ref_data_fix_free_fall.csv", 
+    compare_csv(str(current_file_path) + "/../data/ref_data_fix_free_fall_rsda.csv", 
                 str(current_file_path) + "/../data/sim_data.csv")
