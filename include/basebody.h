@@ -28,7 +28,9 @@ typedef struct BodyStruct{
 
 	Matrix3d Mih_11, Mih_12, Mih_22;
 	Matrix6d Mih, Ki;
-	Vector6d Qih, Li, Qijh_RSDA, Qjih_RSDA;
+	Vector6d Qih, Li, Qijh_RSDA, Qjih_RSDA, Qih_contact;
+	Vector3d r4cp;
+	Matrix3d r4cpt;
 	double Ti_RSDA;
 
 	Vector6d dYih, Ri, dYib;

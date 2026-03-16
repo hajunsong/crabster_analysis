@@ -1,9 +1,3 @@
-python/venv/
-python/.idea/
-python/__pycache__
+build/
 
-matlab/*.asv
-
-c++/build/
-
-**/.vscode/
+.vscode/

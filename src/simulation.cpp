@@ -69,15 +69,19 @@ void Simulation::run(){
     // MR.q_init = R_q_init;
     // RR.q_init = R_q_init;
 
-	RSDA_K.push_back(15000);
-	RSDA_K.push_back(7000);
-	RSDA_K.push_back(7000);
-	RSDA_K.push_back(7000);
+	RSDA_K.push_back(200000);
+	RSDA_K.push_back(200000);
+	RSDA_K.push_back(200000);
+	RSDA_K.push_back(200000);
 
-	RSDA_C.push_back(1500);
-	RSDA_C.push_back(300);
-	RSDA_C.push_back(300);
-	RSDA_C.push_back(700);
+	RSDA_C.push_back(200000);
+	RSDA_C.push_back(200000);
+	RSDA_C.push_back(200000);
+	RSDA_C.push_back(200000);
+
+	contact_K = 330000;
+	contact_C = 33000;
+	road_h = -0.3;
 
     define_Y_vector();
 
@@ -280,8 +284,24 @@ void Simulation::sub_mass_force_analysis(Subsystem &sub)
 	}
 
 	// Contact Force
+	pen_z = sub.re[2] - road_h;
+	pen_dz = sub.dre[2];
+	if(pen_z < 0){
+		contact_force = -contact_K*pen_z - contact_C*pen_dz;
+	}
+	else{
+		contact_force = 0;
+	}
+	sub.body[3].r4cp = sub.re - sub.body[3].ric;
+	sub.body[3].r4cpt = skew(sub.body[3].r4cp);
+	sub.body[3].Qih_contact << 0, 0, contact_force, fasub.body[3].r4cpt*Vector3d(0, 0, contact_force);
+	// r4cp = sub.body(i).re - sub.body(i).ric;
+	// r4cpt = tilde(r4cp);
+	// sub.body(i).fic = [0;0;sub.body(i).mi*g] + sub.body(i).f_cont;
+	// sub.body(i).tic = [0;0;0] + r4cpt*sub.body(i).f_cont;
 
 	// Applied Force
+	
 
 	sub.body[3].Ki = sub.body[3].Mih;
 	sub.body[3].Li = sub.body[3].Qih;

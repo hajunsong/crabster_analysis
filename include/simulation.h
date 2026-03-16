@@ -29,6 +29,8 @@ private:
 	std::vector<Subsystem> sub;
 
 	std::vector<double> RSDA_K, RSDA_C;
+	double contact_K, contact_C;
+	double road_h, pen_z, pen_dz, contact_force;
 
 	Vector<double, Y_SIZE> Y, Yp;
 
