@@ -9,11 +9,12 @@ BaseBody::BaseBody(){
     base.wi.setZero();
     base.wit.setZero();
 
-    base.mi = 582.59;
+    base.mi = 582.59/6.0;
     base.Jip << 156890393.0, 0.0, 0.0,
             0.0, 150169673.0, 0.0,
             0.0, 0.0, 249303699.0;
     base.Jip *= 1e-6;
+    base.Jip /= 6.0;
 
     base.rhoip.setZero();
     base.Cii = euler_zxz(0, 0, 0);

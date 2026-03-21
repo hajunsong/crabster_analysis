@@ -1,4 +1,4 @@
-﻿#include "simulation.h"
+#include "simulation.h"
 
 Simulation::Simulation() : FL(FL_s01p, FL_C01)
 {
@@ -54,7 +54,7 @@ Eigen::Vector<double, Y_SIZE> Simulation::dqddq2Yp()
 void Simulation::run(){
     t_c = 0;
     t_e = 2;
-    dt = 0.001;
+    dt = 0.0005;
 	step = 0;
 
     g = -9.80665;
@@ -69,18 +69,18 @@ void Simulation::run(){
     // MR.q_init = R_q_init;
     // RR.q_init = R_q_init;
 
-	RSDA_K.push_back(200000);
-	RSDA_K.push_back(200000);
-	RSDA_K.push_back(200000);
-	RSDA_K.push_back(200000);
+	RSDA_K.push_back(50000);
+	RSDA_K.push_back(50000);
+	RSDA_K.push_back(50000);
+	RSDA_K.push_back(50000);
 
-	RSDA_C.push_back(200000);
-	RSDA_C.push_back(200000);
-	RSDA_C.push_back(200000);
-	RSDA_C.push_back(200000);
+	RSDA_C.push_back(5000);
+	RSDA_C.push_back(5000);
+	RSDA_C.push_back(5000);
+	RSDA_C.push_back(5000);
 
-	contact_K = 330000;
-	contact_C = 33000;
+	contact_K = 50000;
+	contact_C = 1000;
 	road_h = -0.3;
 
     define_Y_vector();
@@ -106,6 +106,12 @@ void Simulation::run(){
 		row.push_back(static_cast<double>(step));
 		row.push_back(t_c);
 
+		row.insert(row.end(), base.ri.data(), base.ri.data() + 3);
+		row.insert(row.end(), base.rpy.data(), base.rpy.data() + 3);
+		row.insert(row.end(), base.dri.data(), base.dri.data() + 3);
+		row.insert(row.end(), base.wi.data(), base.wi.data() + 3);
+		row.insert(row.end(), base.ddri.data(), base.ddri.data() + 3);
+		row.insert(row.end(), base.dwi.data(), base.dwi.data() + 3);
 		row.insert(row.end(), sub[0].re.data(), sub[0].re.data() + 3);
 		row.insert(row.end(), sub[0].rpy.data(), sub[0].rpy.data() + 3);
 		row.insert(row.end(), {sub[0].q[0], sub[0].q[1], sub[0].q[2], sub[0].q[3]});
@@ -119,6 +125,8 @@ void Simulation::run(){
 		t_c = t_next;
 		step++;
 		Y = Y_next;
+
+		// break;
     }
 
 	const std::string out_csv = "data/sim_data.csv";
@@ -286,7 +294,7 @@ void Simulation::sub_mass_force_analysis(Subsystem &sub)
 	// Contact Force
 	pen_z = sub.re[2] - road_h;
 	pen_dz = sub.dre[2];
-	if(pen_z < 0){
+	if(pen_z <= 0){
 		contact_force = -contact_K*pen_z - contact_C*pen_dz;
 	}
 	else{
@@ -294,11 +302,8 @@ void Simulation::sub_mass_force_analysis(Subsystem &sub)
 	}
 	sub.body[3].r4cp = sub.re - sub.body[3].ric;
 	sub.body[3].r4cpt = skew(sub.body[3].r4cp);
-	sub.body[3].Qih_contact << 0, 0, contact_force, fasub.body[3].r4cpt*Vector3d(0, 0, contact_force);
-	// r4cp = sub.body(i).re - sub.body(i).ric;
-	// r4cpt = tilde(r4cp);
-	// sub.body(i).fic = [0;0;sub.body(i).mi*g] + sub.body(i).f_cont;
-	// sub.body(i).tic = [0;0;0] + r4cpt*sub.body(i).f_cont;
+	sub.body[3].Qih_contact << 0, 0, contact_force, sub.body[3].r4cpt*Vector3d(0, 0, contact_force);
+	sub.body[3].Qih += sub.body[3].Qih_contact;
 
 	// Applied Force
 	
@@ -360,7 +365,8 @@ void Simulation::base_mass_force_analysis()
 void Simulation::EQM()
 {
 	M.setZero();
-	M.block<6,6>(0,0) = Matrix6d::Identity();
+	// M.block<6,6>(0,0) = Matrix6d::Identity();
+	M.block<6,6>(0,0) = base.Ki;
 	M.block<4,4>(6,6) = sub[0].M;
 	// M.block<4,4>(10,10) = ML.M;
 	// M.block<4,4>(14,14) = RL.M;
@@ -369,10 +375,30 @@ void Simulation::EQM()
 	// M.block<4,4>(26,26) = RR.M;
 
 	Q.setZero();
-	Q << Vector6d::Zero(), sub[0].Q;//, ML.Q, RL.Q, FR.Q, MR.Q, RR.Q;
+	Q.segment<6>(0) = base.Li;
+	Q.segment<4>(6) = sub[0].Q;
 
-	ddq = M.ldlt().solve(Q);
-	// ddq = M.llt().solve(Q);
+	// base z(2)만 남기고 나머지 자유도는 완전히 고정(행+열 모두 제거)해서
+	// 대칭성을 유지한 상태로 안정적으로 풀도록 한다.
+	//
+	// base 고정: x(0), y(1), roll(3), pitch(4), yaw(5)
+	std::vector<int> fix_idx = {0, 1, 3, 4, 5};
+	// subsystem도 계산에서 제외하고 싶으면(= base z만) sub DOF(6~9)도 고정
+	// for (int i = 6; i < 10; i++) fix_idx.push_back(i);
+
+	for (int i : fix_idx) {
+		M.row(i).setZero();
+		M.col(i).setZero();
+		M(i,i) = 1.0;
+		Q(i) = 0.0;
+	}
+
+	// std::cout << "M = " << std::endl << M << std::endl;
+	// std::cout << "Q = " << std::endl << Q << std::endl;
+
+	ddq = M.partialPivLu().solve(Q);
+
+	// std::cout << "ddq = " << std::endl << ddq << std::endl;
 
 	base.dYih = ddq.segment<6>(0);
 	sub[0].ddq = ddq.segment<4>(6);
