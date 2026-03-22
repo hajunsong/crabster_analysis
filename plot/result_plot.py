@@ -106,9 +106,9 @@ def compare_csv(rec_csv="rec_data.csv", sim_csv="rec_data_fix_free_fall.csv"):
         fig_joint.savefig(fig_joint_name, dpi=300)
         print(f"Saved: {fig_joint_name}")
 
-    # plt.show()
+    plt.show()
 
 if __name__ == "__main__":
     current_file_path = Path(__file__).resolve().parent.parent
-    compare_csv(str(current_file_path) + "/data/ref_data_fix_free_fall.csv", 
+    compare_csv(str(current_file_path) + "/data/ref_data_contact_rsda.csv", 
                 str(current_file_path) + "/data/sim_data.csv")

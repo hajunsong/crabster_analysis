@@ -56,41 +56,53 @@ COLUMNS = [
     "sub_ddq2",
     "sub_ddq3",
     "sub_ddq4",
+    "sub_rsda1",
+    "sub_rsda2",
+    "sub_rsda3",
+    "sub_rsda4",
 ]
 
 
 def read_log_csv(path: str) -> pd.DataFrame:
     df = pd.read_csv(path, header=None)
-    if df.shape[1] < len(COLUMNS):
+    min_cols = 38  # index, time, base, sub (through sub_ddq4)
+    if df.shape[1] < min_cols:
         raise ValueError(
-            f"Unexpected column count in {path}: got {df.shape[1]}, expected at least {len(COLUMNS)}"
+            f"Unexpected column count in {path}: got {df.shape[1]}, expected at least {min_cols}"
         )
-    if df.shape[1] == len(COLUMNS):
-        df.columns = COLUMNS
+    # Assign column names from COLUMNS; extras if CSV has more columns than COLUMNS
+    n = df.shape[1]
+    if n <= len(COLUMNS):
+        df.columns = COLUMNS[:n]
     else:
-        extras = [f"extra_{i}" for i in range(1, df.shape[1] - len(COLUMNS) + 1)]
+        extras = [f"extra_{i}" for i in range(1, n - len(COLUMNS) + 1)]
         df.columns = COLUMNS + extras
     return df
 
 
-def _plot_single(
+def _plot_subplots(
     ref: pd.DataFrame,
     sim: pd.DataFrame,
-    col: str,
-    title: str,
-    ylabel: str,
+    plots: list[tuple[str, str, str]],
     xlim,
-):
-    fig, ax = plt.subplots(figsize=(8, 4), constrained_layout=True)
-    ax.plot(ref["time"], ref[col], label="Ref", linewidth=2.0)
-    ax.plot(sim["time"], sim[col], label="Sim", linewidth=2.0, linestyle="--")
-    ax.set_title(title)
-    ax.set_xlabel("time [s]")
-    ax.set_ylabel(ylabel)
-    ax.grid(True, alpha=0.35)
-    ax.legend(loc="best")
-    if xlim is not None:
-        ax.set_xlim(*xlim)
+    ncols: int = 3,
+) -> plt.Figure:
+    n = len(plots)
+    nrows = (n + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 4 * nrows), constrained_layout=True)
+    axes_flat = axes.flatten() if n > 1 else [axes]
+    for ax, (col, title, ylabel) in zip(axes_flat, plots):
+        ax.plot(ref["time"], ref[col], label="Ref", linewidth=2.0)
+        ax.plot(sim["time"], sim[col], label="Sim", linewidth=2.0, linestyle="--")
+        ax.set_title(title)
+        ax.set_xlabel("time [s]")
+        ax.set_ylabel(ylabel)
+        ax.grid(True, alpha=0.35)
+        ax.legend(loc="best")
+        if xlim is not None:
+            ax.set_xlim(*xlim)
+    for ax in axes_flat[len(plots) :]:
+        ax.set_visible(False)
     return fig
 
 
@@ -110,7 +122,8 @@ def main():
         "--tmin", type=float, default=None, help="Plot start time (seconds)"
     )
     parser.add_argument("--tmax", type=float, default=None, help="Plot end time (seconds)")
-    parser.add_argument("--show", action="store_true", help="Show interactive plots")
+    parser.add_argument("--show", action="store_true", help="Show interactive plots (save as name.png, overwrite)")
+    parser.add_argument("--save", action="store_true", help="Save with timestamp in filename (name_YYYYMMDD_HHMMSS.png)")
     args = parser.parse_args()
 
     ref = read_log_csv(args.ref)
@@ -125,42 +138,85 @@ def main():
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    use_timestamp = args.save  # --save: timestamp in filename; --show only: overwrite with name.png
 
     if args.show:
         plt.rcParams["figure.max_open_warning"] = 0
 
-    plots = [
-        # Base
+    # Figure 1: Base x,y,z position, velocity, acceleration (3x3)
+    base_plots = [
+        ("base_rx", "Base position (x)", "position [m]"),
+        ("base_ry", "Base position (y)", "position [m]"),
         ("base_rz", "Base position (z)", "position [m]"),
+        ("base_vx", "Base velocity (x)", "velocity [m/s]"),
+        ("base_vy", "Base velocity (y)", "velocity [m/s]"),
         ("base_vz", "Base velocity (z)", "velocity [m/s]"),
+        ("base_accx", "Base acceleration (x)", "acceleration [m/s²]"),
+        ("base_accy", "Base acceleration (y)", "acceleration [m/s²]"),
         ("base_accz", "Base acceleration (z)", "acceleration [m/s²]"),
-        # Sub end-effector
+    ]
+
+    # Base orientation: roll/pitch/yaw, angular vel, angular acc (3x3)
+    base_orientation_plots = [
+        ("base_roll", "Base orientation (roll)", "angle [rad]"),
+        ("base_pich", "Base orientation (pitch)", "angle [rad]"),
+        ("base_yaw", "Base orientation (yaw)", "angle [rad]"),
+        ("base_wx", "Base angular velocity (wx)", "rad/s"),
+        ("base_wy", "Base angular velocity (wy)", "rad/s"),
+        ("base_wz", "Base angular velocity (wz)", "rad/s"),
+        ("base_ax", "Base angular acceleration (ax)", "rad/s²"),
+        ("base_ay", "Base angular acceleration (ay)", "rad/s²"),
+        ("base_az", "Base angular acceleration (az)", "rad/s²"),
+    ]
+
+    # Sub end position + orientation (2x3)
+    sub_end_plots = [
         ("sub_re_x", "Sub end position (x)", "position [m]"),
         ("sub_re_y", "Sub end position (y)", "position [m]"),
         ("sub_re_z", "Sub end position (z)", "position [m]"),
         ("sub_re_roll", "Sub end orientation (roll)", "angle [rad]"),
         ("sub_re_pich", "Sub end orientation (pitch)", "angle [rad]"),
         ("sub_re_yaw", "Sub end orientation (yaw)", "angle [rad]"),
-        # Joint q
+    ]
+
+    # RSDA force (body 0~3) 2x2
+    rsda_plots = [
+        ("sub_rsda1", "RSDA body0 (Ti)", "torque [Nm]"),
+        ("sub_rsda2", "RSDA body1 (Ti)", "torque [Nm]"),
+        ("sub_rsda3", "RSDA body2 (Ti)", "torque [Nm]"),
+        ("sub_rsda4", "RSDA body3 (Ti)", "torque [Nm]"),
+    ]
+
+    # Figure 4: Joint 3x4 - sub_q1, sub_q2, sub_q3, sub_q4 순서로
+    joint_plots = [
         ("sub_q1", "sub_q1", "q [rad]"),
         ("sub_q2", "sub_q2", "q [rad]"),
         ("sub_q3", "sub_q3", "q [rad]"),
         ("sub_q4", "sub_q4", "q [rad]"),
-        # Joint dq
         ("sub_dq1", "sub_dq1", "dq [rad/s]"),
         ("sub_dq2", "sub_dq2", "dq [rad/s]"),
         ("sub_dq3", "sub_dq3", "dq [rad/s]"),
         ("sub_dq4", "sub_dq4", "dq [rad/s]"),
-        # Joint ddq
         ("sub_ddq1", "sub_ddq1", "ddq [rad/s²]"),
         ("sub_ddq2", "sub_ddq2", "ddq [rad/s²]"),
         ("sub_ddq3", "sub_ddq3", "ddq [rad/s²]"),
         ("sub_ddq4", "sub_ddq4", "ddq [rad/s²]"),
     ]
 
-    for col, title, ylabel in plots:
-        fig = _plot_single(ref, sim, col, title, ylabel, xlim)
-        out_path = outdir / f"compare_{col}_{stamp}.png"
+    figure_groups = [
+        ("sub1_base_result", base_plots, 3),
+        ("sub1_base_orientation", base_orientation_plots, 3),
+        ("sub1_sub_end_result", sub_end_plots, 3),
+        ("sub1_joint_result", joint_plots, 4),
+    ]
+    # RSDA figure: only if both ref and sim have RSDA columns
+    if "sub_rsda1" in ref.columns and "sub_rsda1" in sim.columns:
+        figure_groups.append(("sub1_rsda_result", rsda_plots, 2))
+
+    for name, plots, ncols in figure_groups:
+        fig = _plot_subplots(ref, sim, plots, xlim, ncols=ncols)
+        filename = f"{name}_{stamp}.png" if use_timestamp else f"{name}.png"
+        out_path = outdir / filename
         fig.savefig(out_path, dpi=300)
         if not args.show:
             plt.close(fig)

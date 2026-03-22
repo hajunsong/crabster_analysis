@@ -54,7 +54,7 @@ Eigen::Vector<double, Y_SIZE> Simulation::dqddq2Yp()
 void Simulation::run(){
     t_c = 0;
     t_e = 2;
-    dt = 0.0005;
+    dt = 0.0001;
 	step = 0;
 
     g = -9.80665;
@@ -91,16 +91,6 @@ void Simulation::run(){
     {
 		Yp = analysis(Y);
 
-		k1 = Yp;
-		y2 = Y + (dt/2.0)*k1;
-		k2 = analysis(y2);
-		y3 = Y + (dt/2.0)*k2;
-		k3 = analysis(y3);
-		y4 = Y + dt*k3;
-		k4 = analysis(y4);
-		Y_next = Y + (dt/6.0)*(k1 + 2*k2 + 2*k3 + k4);
-		t_next = t_c + dt;
-
 		std::vector<double> row;
 
 		row.push_back(static_cast<double>(step));
@@ -114,19 +104,28 @@ void Simulation::run(){
 		row.insert(row.end(), base.dwi.data(), base.dwi.data() + 3);
 		row.insert(row.end(), sub[0].re.data(), sub[0].re.data() + 3);
 		row.insert(row.end(), sub[0].rpy.data(), sub[0].rpy.data() + 3);
-		row.insert(row.end(), {sub[0].q[0], sub[0].q[1], sub[0].q[2], sub[0].q[3]});
-		row.insert(row.end(), {sub[0].dq[0], sub[0].dq[1], sub[0].dq[2], sub[0].dq[3]});
-		row.insert(row.end(), {sub[0].ddq[0], sub[0].ddq[1], sub[0].ddq[2], sub[0].ddq[3]});
+		row.insert(row.end(), sub[0].q.data(), sub[0].q.data() + 4);
+		row.insert(row.end(), sub[0].dq.data(), sub[0].dq.data() + 4);
+		row.insert(row.end(), sub[0].ddq.data(), sub[0].ddq.data() + 4);
+		row.insert(row.end(), {sub[0].body[0].Ti_RSDA, sub[0].body[1].Ti_RSDA, sub[0].body[2].Ti_RSDA, sub[0].body[3].Ti_RSDA});
 
 		log.push_back(std::move(row));
+
+		k1 = Yp;
+		y2 = Y + (dt/2.0)*k1;
+		k2 = analysis(y2);
+		y3 = Y + (dt/2.0)*k2;
+		k3 = analysis(y3);
+		y4 = Y + dt*k3;
+		k4 = analysis(y4);
+		Y_next = Y + (dt/6.0)*(k1 + 2*k2 + 2*k3 + k4);
+		t_next = t_c + dt;
 
 		std::cout << "t_c : " << t_c << std::endl;
 
 		t_c = t_next;
 		step++;
 		Y = Y_next;
-
-		// break;
     }
 
 	const std::string out_csv = "data/sim_data.csv";
@@ -256,7 +255,8 @@ void Simulation::sub_velocity_analysis(Subsystem &sub)
 		i++;
 	}
 
-	sub.dre = sub.body[3].dri + sub.body[3].wit*sub.body[3].ri;
+	sub.dre = sub.body[3].dri + sub.body[3].wit*sub.body[3].se;
+	// sub.dre = sub.body[3].dri + sub.body[3].wit*sub.re;
 }
 
 void Simulation::sub_mass_force_analysis(Subsystem &sub)
@@ -312,7 +312,7 @@ void Simulation::sub_mass_force_analysis(Subsystem &sub)
 	sub.body[3].Li = sub.body[3].Qih;
 	for(int i = 2; i >= 0; --i){
 		sub.body[i].Ki = sub.body[i].Mih + sub.body[i + 1].Ki;
-		sub.body[i].Li = sub.body[i].Qih + sub.body[i + 1].Li - sub.body[i + 1].Ki*sub.body[i + 1].Di + sub.body[i + 1].Qjih_RSDA;
+		sub.body[i].Li = sub.body[i].Qih + sub.body[i + 1].Li - sub.body[i + 1].Ki*sub.body[i + 1].Di;// + sub.body[i + 1].Qjih_RSDA;
 	}
 
 	for(int i = 0; i < 4; i++){
@@ -357,15 +357,14 @@ void Simulation::base_mass_force_analysis()
 	// K0 = M0h + FL.K1 + ML.K1 + RL.K1 + FR.K1 + MR.K1 + RR.K1;
 	// L0 = Q0h + FL.L1 + ML.L1 + RL.L1 + FR.L1 + MR.L1 + RR.L1
 	// 		- (FL.K1*FL.D1 + ML.K1*ML.D1 + RL.K1*RL.D1 + FR.K1*FR.D1 + MR.K1*MR.D1 + RR.K1*RR.D1);
-
 	base.Ki = base.Mih + sub[0].body[0].Ki;
-	base.Li = base.Qih + sub[0].body[0].Li - sub[0].body[0].Ki*sub[0].body[0].Di;
+	base.Li = base.Qih + sub[0].body[0].Li - sub[0].body[0].Ki*sub[0].body[0].Di;// + sub[0].body[0].Qjih_RSDA;
 }
 
 void Simulation::EQM()
 {
 	M.setZero();
-	// M.block<6,6>(0,0) = Matrix6d::Identity();
+	// base.Ki = Matrix6d::Identity();
 	M.block<6,6>(0,0) = base.Ki;
 	M.block<4,4>(6,6) = sub[0].M;
 	// M.block<4,4>(10,10) = ML.M;
@@ -375,16 +374,16 @@ void Simulation::EQM()
 	// M.block<4,4>(26,26) = RR.M;
 
 	Q.setZero();
+	// base.Li.setZero();
 	Q.segment<6>(0) = base.Li;
 	Q.segment<4>(6) = sub[0].Q;
 
+	// Fix base DOF
 	// base z(2)만 남기고 나머지 자유도는 완전히 고정(행+열 모두 제거)해서
 	// 대칭성을 유지한 상태로 안정적으로 풀도록 한다.
 	//
 	// base 고정: x(0), y(1), roll(3), pitch(4), yaw(5)
 	std::vector<int> fix_idx = {0, 1, 3, 4, 5};
-	// subsystem도 계산에서 제외하고 싶으면(= base z만) sub DOF(6~9)도 고정
-	// for (int i = 6; i < 10; i++) fix_idx.push_back(i);
 
 	for (int i : fix_idx) {
 		M.row(i).setZero();
@@ -396,7 +395,7 @@ void Simulation::EQM()
 	// std::cout << "M = " << std::endl << M << std::endl;
 	// std::cout << "Q = " << std::endl << Q << std::endl;
 
-	ddq = M.partialPivLu().solve(Q);
+	ddq = M.ldlt().solve(Q);
 
 	// std::cout << "ddq = " << std::endl << ddq << std::endl;
 
